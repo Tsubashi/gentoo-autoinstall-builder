@@ -26,6 +26,9 @@ echo "Mounting root filesystem"
 echo "Extracting base system"
 ./extract_stage.sh
 
+echo "Mounting boot filesystem"
+./mount_boot.sh
+
 echo "Binding Filesystems for chroot"
 ./mount_binds.sh
 
@@ -35,48 +38,22 @@ chroot_exec "emerge --sync"
 
 cp -f /etc/resolv.conf ${R}/etc
 
-# install standard packages
 echo "Installing packages"
 chroot_exec "emerge --jobs=8 --keep-going ${EMERGE_BASE_PACKAGES} ${EMERGE_EXTRA_PACKAGES}"
 
 echo "Copying in kernel configs"
-# build and install kernel/initrd
-mkdir -p ${R}/etc/kernels/
-if [ -f kernel-config ];then
-    cp -f kernel-config ${R}/etc/kernels/kernel-config-cloud
-fi
-
-# copy config in place
-cp -f ${R}/etc/kernels/kernel-config-cloud ${R}/usr/src/linux/.config
+cp -f kernel-config ${R}/usr/src/linux/.config
 
 echo "Building and installing kernel"
-if [ "${KERNEL_CONFIGURE}" = "1" ];then
-    chroot_exec "cd ${K}; make nconfig;"
-fi
-
 chroot_exec "cd ${K}; make olddefconfig; make -j9 ${KERNEL_MAKE_OPTS}; make modules_install; make install; make clean;"
 
-# in case any adjustments are made via menuconfig etc
-cp -f ${R}/${K}/.config ${R}/etc/kernels/kernel-config-cloud
-
-# keep the original around for safe keeping
-cp -f ${R}/etc/kernels/kernel-config-cloud ${R}/etc/kernels/kernel-config-cloud-original
-
 echo "Installing bootloader (GRUB)"
-
-# install grub to the MBR
 chroot_exec "grub-install ${DEV}"
 
-# copy /etc/default/grub
+echo "Configuring bootloader"
 cp -f grub ${R}/etc/default/grub
 chmod 644 ${R}/etc/default/grub
-
-# generate grub.cfg
 chroot_exec "grub-mkconfig -o /boot/grub/grub.cfg"
-
-# enable serial console
-sed -i 's/^#s0:/s0:/g' ${R}/etc/inittab
-sed -i 's/^#s1:/s1:/g' ${R}/etc/inittab
 
 echo "Configuring services"
 # create init script for net.eth0
@@ -114,8 +91,10 @@ chmod 644 ${R}/etc/conf.d/hostname
 echo "Generating Filesystem Tables"
 # generate fstab
 FS_UUID=$(blkid "${PART}" | cut -d " " -f2)
+BOOT_UUID=$(blkid "${BBOT_PART}" | cut -d " " -f2)
 cat > ${R}/etc/fstab << EOF
 ${FS_UUID}      /       ext4        defaults,noatime,user_xattr 0 1
+${BOOT_UUID}    /boot   ext2        defaults,noatime,noauto     1 2
 EOF
 
 echo "Copying in the last of the files"
