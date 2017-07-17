@@ -54,7 +54,7 @@ if [ "${KERNEL_CONFIGURE}" = "1" ];then
     chroot_exec "cd ${K}; make nconfig;"
 fi
 
-chroot_exec "cd ${K}; make olddefconfig; make ${KERNEL_MAKE_OPTS}; make modules_install; make install; make clean;"
+chroot_exec "cd ${K}; make olddefconfig; make -j9 ${KERNEL_MAKE_OPTS}; make modules_install; make install; make clean;"
 
 # in case any adjustments are made via menuconfig etc
 cp -f ${R}/${K}/.config ${R}/etc/kernels/kernel-config-cloud
