@@ -77,6 +77,7 @@ fi
     sudo rm -rf $TMP_DIR
   fi
   mkdir $TMP_DIR
+  echo "Acquiring sources"
   source config.sh
   echo "= Unpacking ${ISO}"
   mkdir -p $TMP_DIR/mount $TMP_DIR/iso $TMP_DIR/sqfs $TMP_DIR/initrd
