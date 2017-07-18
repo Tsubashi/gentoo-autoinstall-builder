@@ -60,7 +60,7 @@ echo "Configuring services"
 chroot_exec "cd /etc/init.d/; ln -sf net.lo net.eth0"
 
 # enable default services
-for service in acpid syslog-ng cronie net.eth0 sshd ntpd; do
+for service in acpid syslog-ng cronie net.eth0 sshd ntpd qemu-guest-agent; do
     chroot_exec "rc-update add ${service} default"
 done
 
@@ -113,5 +113,6 @@ chroot_exec "emaint all -f"
 rm -rf ${R}/usr/portage/distfiles/*
 rm -rf ${R}/etc/resolv.conf
 
-echo "Shutting down"
-shutdown -h now
+echo ""
+echo ""
+echo "=== All finished! Make sure to check for any egregious errors. Barring those, go ahead and shutdown and remove the CD to get started! ==="
