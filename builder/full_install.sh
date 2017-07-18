@@ -98,7 +98,7 @@ ${BOOT_UUID}    /boot   ext2        defaults,noatime,noauto     1 2
 EOF
 
 echo "Setting Root Password to 'eye<3Gentoo'"
-chroot_exec "echo 'eye<3Gentoo' | passwd --stdin"
+chroot_exec "echo 'root:eye<3Gentoo' | chpasswd"
 
 echo "Copying in the last of the files"
 # copy in growpart from cloud-utils package
