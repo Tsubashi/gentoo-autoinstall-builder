@@ -60,7 +60,7 @@ echo "Configuring services"
 chroot_exec "cd /etc/init.d/; ln -sf net.lo net.eth0"
 
 # enable default services
-for service in acpid syslog-ng cronie net.eth0 sshd cloud-init-local cloud-init cloud-config cloud-final;do
+for service in acpid syslog-ng cronie net.eth0 sshd ntpd; do
     chroot_exec "rc-update add ${service} default"
 done
 
@@ -84,7 +84,7 @@ chroot_exec "echo 'vm.swappiness = 0' >> /etc/sysctl.d/swappiness.conf"
 # let ipv6 use normal slaac
 chroot_exec "sed -i 's/slaac/#slaac/g' /etc/dhcpcd.conf"
 
-# by default read /etc/hostname as set by cloud-init
+# by default read /etc/hostname 
 cp -f hostname ${R}/etc/conf.d/
 chmod 644 ${R}/etc/conf.d/hostname
 
@@ -97,15 +97,10 @@ ${FS_UUID}      /       ext4        defaults,noatime,user_xattr 0 1
 ${BOOT_UUID}    /boot   ext2        defaults,noatime,noauto     1 2
 EOF
 
+echo "Setting Root Password to 'eye<3Gentoo'"
+chroot_exec "echo 'eye<3Gentoo' | passwd --stdin"
+
 echo "Copying in the last of the files"
-# copy cloud-init config into place
-cp -f cloud.cfg ${R}/etc/cloud/
-chmod 644 ${R}/etc/cloud/cloud.cfg
-
-# eventually cloud-init will install this file
-cp -f hosts.gentoo.tmpl ${R}/etc/cloud/templates/
-chmod 644 ${R}/etc/cloud/templates/hosts.gentoo.tmpl
-
 # copy in growpart from cloud-utils package
 cp -f growpart ${R}/usr/bin/
 chmod 755 ${R}/usr/bin/growpart
