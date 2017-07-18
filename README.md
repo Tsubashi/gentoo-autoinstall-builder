@@ -1,98 +1,27 @@
-# Intro
-Create gentoo openstack-compatible images
+# Purpose
+This script is meant to build an unattended install CD for gentoo. In operation, it...
+1. downloads the latest install disk, portage snapshot, stage 3 tarball.
+2. packages them all together into a single iso.
+3. adds an auto-run script which installs to the system onto /dev/vda.
 
 # Use
-gentoo-cloud-image-builder is meant to be run from a qemu compatible host.  The high-level process includes booting a vm (using qemu) to the gentoo install cd/environment and subsequently automating a complete install.
+This script doesn't actually install gentoo. It generates an iso which should be capable of an unattended install. In order to build the image..
+1. Clone the repo 
+2. Ensure you have the following installed:
+  - curl
+  - GNU sed
+  - sudo
+  - mkisofs
+3. Ensure you have internet connectivity (all required files are downloaded for you)
+4. Ensure you have sudo permissions. The script will ask for your password when it requires root permissions.
+4. Run the following command:
 
-In order to build an image you simply need to clone the repo and ensure you have a few standard deps on your host machine including:
+    ```./build.sh```
 
- * qemu / kvm
- * curl
- * mkisofs
- * internet connectivity (all required files are downloaded for you)
+5. You should then see the following line:
+    
+    ```This script will trash the folder '/tmp/gentoo-install' if it exists, wiping any contents. Are you sure? Press any key in the next 15 seconds to continue...```
 
-On the host:
-
-```./launch.sh -t build```
-
-On the vm after booting the gentoo installer:
-
-```
-mkdir -p /mnt/builder
-mount /dev/disk/by-label/builder /mnt/builder
-/mnt/builder/full_install.sh
-```
-
-At this point kick back and relax.  Your image will be ready shortly.  Once everything is done you can halt the vm and test it out by running:
-
-```./launch.sh -t test```
-
-# Upload to Openstack
-You may shrink the image by using virt-sparify
-
-```virt-sparsify --compress gentoo.img gentoo-$(date +%Y-%m-%d).img```
-
-Once you have a valid image you can upload to openstack:
-
-```glance image-create --name 'gentoo (20150507) x86_64' --disk-format qcow2 --container-format bare --is-public true --file gentoo.img --progress```
-
-# TODO
- * app-emulation/openstack-guest-agents-unix?
- * remove /usr/src? remove /usr/portage?  the both combined make up 2GB (out of 3GB) of the resultant image
-
-# Kernel
- * memory compaction/hotplug
- * namespaces/cgroups (for docker)
- * iptables/networking options
- * hugetlb?
- * ecrypt
- * mdraid
- * non-module virtio support
- * drbd
- * cirrus/hyper-v/qxl/etc graphics
- * disk hotplug: CONFIG_HOTPLUG=y CONFIG_ACPI_HOTPLUG_CPU=y CONFIG_HOTPLUG_PCI=y
- * ensure SYSFS deprecated features are not enabled
-
-```
-cirrus
-ttm
-ppdev
-drm_kms_helper
-parport_pc
-serio_raw
-ghash_clmulni_intel
-parport
-i2c_piix4
-ata_generic
-pata_acpi
-
-piix4_smbus
-
-imexps/s
-
-ACPI PCI Interrupt Link LNKC
-LNKA
-hid-generic
-tsc
-mousedev
-usbcore
-usbserial
-serio
-i8042
-libphy
-ata_piix
-pci_hotplug
-pciehp
-intel_idle
-tsc
-uhci_hcd
-i2c_piix4
-virtio-pci
-```
-# LINKS
- * http://terrarum.net/blog/creating-a-gentoo-cloud-image.html
- * http://blog.condi.me/base/
- * http://blog.david-jung.net/post/25402391612/testing-cloud-init-forcing-re-run-of-user
- * http://docs.openstack.org/image-guide/content/ch_openstack_images.html
- * https://wiki.ubuntu.com/QemuDiskHotplug
- * https://github.com/prometheanfire/gentoo-cloud-prep
+6. Press a key to continue. 
+7. Enter your password when prompted to authorize the script to run as root (via sudo).
+8. Relax. Your install CD will be finished soon
