@@ -5,6 +5,4 @@
 /builder/stage3-*
 
 /*.img
-/iso/*.iso
-
-/log/*.log
+/*.iso
