@@ -26,6 +26,7 @@ if [ -z "${ISO}" -o ! -f "iso/${ISO}" ];then
     else
         :
         echo "downloading current iso ${ISO}"
+        rm iso/*.iso
         curl -o "iso/${ISO}" "${BASE_URL}${CURRENT}";
     fi
 fi
@@ -42,6 +43,7 @@ if [ -z "${STAGE}" -o ! -f "builder/${STAGE}" ];then
     else
         :
         echo "downloading current stage ${STAGE}"
+        rm builder/*stage3*.bz2
         curl -o "builder/${STAGE}" "${BASE_URL}${CURRENT}";
     fi
 fi
@@ -56,6 +58,7 @@ if [ -z "${PORTAGE}" ];then
     else
         :
         echo "downloading current portage ${PORTAGE}"
+        rm builder/*portage*.bz2
         curl -o "builder/${PORTAGE}" "http://distfiles.gentoo.org/releases/snapshots/current/${PORTAGE}";
     fi
 fi
