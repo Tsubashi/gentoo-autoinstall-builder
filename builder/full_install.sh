@@ -62,9 +62,10 @@ chroot_exec "grub-mkconfig -o /boot/grub/grub.cfg"
 echo "Configuring services"
 # create init script for net.eth0
 chroot_exec "cd /etc/init.d/; ln -sf net.lo net.eth0"
-cp -f salt-config ${R}/etc/salt/minion
 
-# copy in salt configuration
+# set up salt configuration
+cp -f salt-config ${R}/etc/salt/minion
+echo "id \"$(shuf -n1 adjectives.txt)-$(shuf -n1 first-names.txt)\"" >> ${R}/etc/salt/minion
 
 # enable default services
 for service in acpid syslog-ng cronie net.eth0 sshd ntpd qemu-guest-agent salt-minion; do
