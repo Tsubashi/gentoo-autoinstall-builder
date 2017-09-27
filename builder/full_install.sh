@@ -34,6 +34,8 @@ echo "Binding Filesystems for chroot"
 
 echo "Extracting portage"
 ./extract_portage.sh
+cp -f package.use ${R}/etc/portage/package.use/all
+cp -f package.accept_keywords ${R}/etc/portage/package.accept_keywords
 cp -f /etc/resolv.conf ${R}/etc
 
 echo "Syncing portage (Just in Case)"

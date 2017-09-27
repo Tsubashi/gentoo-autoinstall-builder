@@ -1,0 +1,2 @@
+net-fs/samba ads gnutls ldap readline pam winbind -cups
+app-emulation/docker overlay
