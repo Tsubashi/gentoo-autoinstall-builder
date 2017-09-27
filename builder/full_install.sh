@@ -34,9 +34,10 @@ echo "Binding Filesystems for chroot"
 
 echo "Extracting portage"
 ./extract_portage.sh
-chroot_exec "emerge --sync"
-
 cp -f /etc/resolv.conf ${R}/etc
+
+echo "Syncing portage (Just in Case)"
+chroot_exec "emerge --sync"
 
 echo "Installing packages"
 chroot_exec "emerge --jobs=8 --keep-going ${EMERGE_BASE_PACKAGES} ${EMERGE_EXTRA_PACKAGES}"
@@ -58,9 +59,12 @@ chroot_exec "grub-mkconfig -o /boot/grub/grub.cfg"
 echo "Configuring services"
 # create init script for net.eth0
 chroot_exec "cd /etc/init.d/; ln -sf net.lo net.eth0"
+cp -f salt-config ${R}/etc/salt/minion
+
+# copy in salt configuration
 
 # enable default services
-for service in acpid syslog-ng cronie net.eth0 sshd ntpd qemu-guest-agent; do
+for service in acpid syslog-ng cronie net.eth0 sshd ntpd qemu-guest-agent salt-minion; do
     chroot_exec "rc-update add ${service} default"
 done
 
