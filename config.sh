@@ -12,7 +12,7 @@ BASE_URL="http://distfiles.gentoo.org/releases/amd64/autobuilds/"
 #KERNEL_MAKE_OPTS=""
 #EMERGE_EXTRA_PACKAGES
 
-EMERGE_BASE_PACKAGES="acpid dmidecode syslog-ng cronie dhcpcd mlocate xfsprogs dosfstools grub sudo postfix vim gentoo-sources linux-firmware parted portage-utils gentoolkit bash-completion gentoo-bashcomp eix tmux app-misc/screen dev-vcs/git net-misc/curl usbutils pciutils logrotate gptfdisk sys-block/gpart openssh qemu-guest-agent ntp app-admin/salt"
+EMERGE_BASE_PACKAGES="acpid dmidecode syslog-ng cronie dhcpcd mlocate xfsprogs dosfstools grub sudo postfix vim gentoo-sources linux-firmware parted portage-utils gentoolkit bash-completion gentoo-bashcomp eix tmux app-misc/screen dev-vcs/git net-misc/curl usbutils pciutils logrotate gptfdisk sys-block/gpart openssh qemu-guest-agent ntp app-admin/salt sysstat"
 
 
 if [ -z "${ISO}" -o ! -f "iso/${ISO}" ];then
