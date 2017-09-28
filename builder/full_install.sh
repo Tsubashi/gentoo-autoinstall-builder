@@ -49,7 +49,7 @@ echo "Copying in kernel configs"
 cp -f kernel-config ${R}/usr/src/linux/.config
 
 echo "Building and installing kernel"
-chroot_exec "cd ${K}; make olddefconfig; make -j9 ${KERNEL_MAKE_OPTS}; make modules_install; make install; make clean;"
+chroot_exec "cd ${K}; make olddefconfig; make -j$(nproc) ${KERNEL_MAKE_OPTS}; make modules_install; make install; make clean;"
 
 echo "Installing bootloader (GRUB)"
 chroot_exec "grub-install ${DEV}"
