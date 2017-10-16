@@ -8,6 +8,7 @@ if read -r -s -n 1 -t 5 -p "I am about to commence a full installation. If this 
 fi
 cd `dirname "${0}"`
 source builder.cfg
+HOSTNAME=$(shuf -n1 adjectives.txt)-$(shuf -n1 first-names.txt)
 
 chroot_exec() {
     local args="${@}"
@@ -65,7 +66,7 @@ chroot_exec "cd /etc/init.d/; ln -sf net.lo net.eth0"
 
 # set up salt configuration
 cp -f salt-config ${R}/etc/salt/minion
-echo "id: \"$(shuf -n1 adjectives.txt)-$(shuf -n1 first-names.txt)\"" >> ${R}/etc/salt/minion
+echo "id: \"$HOSTNAME\"" >> ${R}/etc/salt/minion
 
 # enable default services
 for service in acpid syslog-ng cronie net.eth0 sshd ntpd qemu-guest-agent salt-minion; do
@@ -95,6 +96,7 @@ chroot_exec "sed -i 's/slaac/#slaac/g' /etc/dhcpcd.conf"
 # by default read /etc/hostname 
 cp -f hostname ${R}/etc/conf.d/
 chmod 644 ${R}/etc/conf.d/hostname
+echo "$HOSTNAME" > ${R}/etc/hostname
 
 echo "Generating Filesystem Tables"
 # generate fstab
