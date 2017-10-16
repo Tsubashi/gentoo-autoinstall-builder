@@ -1,4 +1,0 @@
-master: tethys-saltmaster.aquaveo.com
-grains:
-  roles:
-    - htcondor
