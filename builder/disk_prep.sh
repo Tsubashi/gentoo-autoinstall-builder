@@ -4,14 +4,14 @@ cd `dirname "${0}"`
 source builder.cfg
 
 echo "Rewriting disk label (GPT)"
-parted -s "${DEV}" mklabel gpt
+parted -s "$1" mklabel gpt
 echo "Creating GRUB Partition"
-parted -s "${DEV}" mkpart primary 1M 2M
-parted -s "${DEV}" set 1 bios_grub on 
+parted -s "$1" mkpart primary 1M 2M
+parted -s "$1" set 1 bios_grub on 
 echo "Creating Boot Partition"
-parted -s "${DEV}" mkpart primary 2M 1G
+parted -s "$1" mkpart primary 2M 1G
 echo "Creating Root Partition"
-parted -s "${DEV}" mkpart primary 1G 100%
+parted -s "$1" mkpart primary 1G 100%
 partprobe > /dev/null 2>&1
 
 echo "Installing filesystems"

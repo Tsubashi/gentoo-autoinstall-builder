@@ -2,11 +2,24 @@
 
 echo 
 
-if read -r -s -n 1 -t 5 -p "I am about to commence a full installation. If this is not what you want, press any key to cancel. You have 15 seconds..." key; then
+# Determine where we are installing
+if [ -f /dev/vda ]; then
+  DEV=\"/dev/vda\"
+elif [ -f /dev/sda ]; then
+  DEV=/dev/sda
+elif [ -f /dev/hda ]; then
+  DEV=/dev/hda
+else
+  echo "Unable to find any disk to install on. I checked /dev/{v,s,h}da and got nothing. Make sure the disk is connected and operational and try again."
+fi
+
+
+if read -r -s -n 1 -t 5 -p "I am about to commence a full installation on $DEV. This will destroy it's current contents. If this is not what you want, press any key to cancel. You have 15 seconds..." key; then
   echo "Aborting."
   exit
 fi
 cd `dirname "${0}"`
+
 source builder.cfg
 HOSTNAME=$(shuf -n1 adjectives.txt)-$(shuf -n1 first-names.txt)
 
@@ -19,7 +32,7 @@ R="/mnt/gentoo"
 K="/usr/src/linux"
 
 echo "Creating partitions and formatting disk"
-./disk_prep.sh
+./disk_prep.sh $DEV
 
 echo "Mounting root filesystem"
 ./mount_root.sh
@@ -53,7 +66,7 @@ echo "Building and installing kernel"
 chroot_exec "cd ${K}; make olddefconfig; make -j$(nproc) ${KERNEL_MAKE_OPTS}; make modules_install; make install; make clean;"
 
 echo "Installing bootloader (GRUB)"
-chroot_exec "grub-install ${DEV}"
+chroot_exec "grub-install $DEV"
 
 echo "Configuring bootloader"
 cp -f grub ${R}/etc/default/grub
