@@ -2,7 +2,12 @@
 This script is meant to build an unattended install CD for gentoo. In operation, it...
 1. downloads the latest install disk, portage snapshot, stage 3 tarball.
 2. packages them all together into a single iso.
-3. adds an auto-run script which installs to the system onto /dev/vda.
+3. adds an auto-run script which installs the system onto the first disk.
+  - Disk preference:
+    - /dev/vda
+    - /dev/sda
+    - /dev/hda
+4. runs salt for post-installation configuration. Make sure you have your saltmaster running and accesible.
 
 # Use
 This script doesn't actually install gentoo. It generates an iso which should be capable of an unattended install. In order to build the image..
