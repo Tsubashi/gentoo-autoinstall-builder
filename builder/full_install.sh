@@ -3,11 +3,11 @@
 echo 
 
 # Determine where we are installing
-if [ -f /dev/vda ]; then
-  DEV=\"/dev/vda\"
-elif [ -f /dev/sda ]; then
+if [ -b /dev/vda ]; then
+  DEV=/dev/vda
+elif [ -b /dev/sda ]; then
   DEV=/dev/sda
-elif [ -f /dev/hda ]; then
+elif [ -b /dev/hda ]; then
   DEV=/dev/hda
 else
   echo "Unable to find any disk to install on. I checked /dev/{v,s,h}da and got nothing. Make sure the disk is connected and operational and try again."
@@ -32,22 +32,37 @@ R="/mnt/gentoo"
 K="/usr/src/linux"
 
 echo "Creating partitions and formatting disk"
-./disk_prep.sh $DEV
+echo "Rewriting disk label (GPT)"
+parted -s "$DEV" mklabel gpt
+echo "Creating GRUB Partition"
+parted -s "$DEV" mkpart primary 1M 2M
+parted -s "$DEV" set 1 bios_grub on 
+echo "Creating Boot Partition"
+parted -s "$DEV" mkpart primary 2M 1G
+echo "Creating Root Partition"
+parted -s "$DEV" mkpart primary 1G 100%
+partprobe > /dev/null 2>&1
+
+echo "Installing filesystems"
+mkfs.ext4 -FF "$DEV3"
+mkfs.ext2 -FF "$DEV2"
 
 echo "Mounting root filesystem"
-./mount_root.sh
+mount $DEV3 /mnt/gentoo
 
 echo "Extracting base system"
-./extract_stage.sh
+tar -xjpf "${STAGE}" -C /mnt/gentoo
 
 echo "Mounting boot filesystem"
-./mount_boot.sh
+mount $DEV2 /mnt/gentoo/boot
 
 echo "Binding Filesystems for chroot"
-./mount_binds.sh
+mount -t proc proc /mnt/gentoo/proc
+mount --rbind /dev /mnt/gentoo/dev
+mount --rbind /sys /mnt/gentoo/sys
 
 echo "Extracting portage"
-./extract_portage.sh
+tar -xjpf "${PORTAGE}" -C /mnt/gentoo/usr/
 cp -f package.use ${R}/etc/portage/package.use/all
 cp -f package.accept_keywords ${R}/etc/portage/package.accept_keywords
 echo "MAKEOPTS=\"-j$(nproc)\"" >> ${R}/etc/portage/make.conf
@@ -113,8 +128,8 @@ echo "$HOSTNAME" > ${R}/etc/hostname
 
 echo "Generating Filesystem Tables"
 # generate fstab
-FS_UUID=$(blkid "${PART}" | cut -d " " -f2)
-BOOT_UUID=$(blkid "${BBOT_PART}" | cut -d " " -f2)
+FS_UUID=$(blkid "$DEV3" | cut -d " " -f2)
+BOOT_UUID=$(blkid "$DEV2" | cut -d " " -f2)
 cat > ${R}/etc/fstab << EOF
 ${FS_UUID}      /       ext4        defaults,noatime,user_xattr 0 1
 ${BOOT_UUID}    /boot   ext2        defaults,noatime,noauto     1 2
