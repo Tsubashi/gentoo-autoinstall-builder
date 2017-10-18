@@ -1,6 +1,11 @@
 #!/bin/bash
 
 echo 
+echo "=== GENTOO AUTO-INSTALL ==="
+echo "| Built from git revision |"
+echo "| $REV |"
+echo "*-------------------------*" 
+echo
 
 # Determine where we are installing
 if [ -b /dev/vda ]; then
@@ -11,6 +16,7 @@ elif [ -b /dev/hda ]; then
   DEV=/dev/hda
 else
   echo "Unable to find any disk to install on. I checked /dev/{v,s,h}da and got nothing. Make sure the disk is connected and operational and try again."
+  exit
 fi
 
 
@@ -44,17 +50,17 @@ parted -s "$DEV" mkpart primary 1G 100%
 partprobe > /dev/null 2>&1
 
 echo "Installing filesystems"
-mkfs.ext4 -FF "$DEV3"
-mkfs.ext2 -FF "$DEV2"
+mkfs.ext4 -FF "$DEV""3"
+mkfs.ext2 -FF "$DEV""2"
 
 echo "Mounting root filesystem"
-mount $DEV3 /mnt/gentoo
+mount "$DEV""3" /mnt/gentoo
 
 echo "Extracting base system"
 tar -xjpf "${STAGE}" -C /mnt/gentoo
 
 echo "Mounting boot filesystem"
-mount $DEV2 /mnt/gentoo/boot
+mount "$DEV""2" /mnt/gentoo/boot
 
 echo "Binding Filesystems for chroot"
 mount -t proc proc /mnt/gentoo/proc
@@ -128,8 +134,8 @@ echo "$HOSTNAME" > ${R}/etc/hostname
 
 echo "Generating Filesystem Tables"
 # generate fstab
-FS_UUID=$(blkid "$DEV3" | cut -d " " -f2)
-BOOT_UUID=$(blkid "$DEV2" | cut -d " " -f2)
+FS_UUID=$(blkid "$DEV""3" | cut -d " " -f2)
+BOOT_UUID=$(blkid "$DEV""2" | cut -d " " -f2)
 cat > ${R}/etc/fstab << EOF
 ${FS_UUID}      /       ext4        defaults,noatime,user_xattr 0 1
 ${BOOT_UUID}    /boot   ext2        defaults,noatime,noauto     1 2
