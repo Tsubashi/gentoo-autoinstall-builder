@@ -72,6 +72,7 @@ tar -xjpf "${PORTAGE}" -C /mnt/gentoo/usr/
 cp -f package.use ${R}/etc/portage/package.use/all
 cp -f package.accept_keywords ${R}/etc/portage/package.accept_keywords
 echo "MAKEOPTS=\"-j$(nproc)\"" >> ${R}/etc/portage/make.conf
+sed -i 's/bindist/-bindist/g' ${R}/etc/portage/make.conf
 cp -f /etc/resolv.conf ${R}/etc
 
 echo "Syncing portage (Just in Case)"
