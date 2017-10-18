@@ -3,7 +3,7 @@
 echo 
 echo "=== GENTOO AUTO-INSTALL ==="
 echo "| Built from git revision |"
-echo "| $REV |"
+echo "|         $REV         |"
 echo "*-------------------------*" 
 echo
 

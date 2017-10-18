@@ -71,3 +71,4 @@ echo "KERNEL_CONFIGURE=\"${KERNEL_CONFIGURE}\"" >> builder/builder.cfg
 echo "KERNEL_MAKE_OPTS=\"${KERNEL_MAKE_OPTS}\"" >> builder/builder.cfg
 echo "EMERGE_BASE_PACKAGES=\"${EMERGE_BASE_PACKAGES}\"" >> builder/builder.cfg
 echo "EMERGE_EXTRA_PACKAGES=\"${EMERGE_EXTRA_PACKAGES}\"" >> builder/builder.cfg
+echo "REV=\"$(git rev-parse --verify --short HEAD)\"" >> builder/builder.cfg
