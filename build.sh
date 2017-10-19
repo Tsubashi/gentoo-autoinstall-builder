@@ -63,50 +63,69 @@ parameter_validation(){
     fi
 }
 
+chroot_exec() {
+  local args="${@}"
+  chroot "${R}" /bin/bash -c "${args}"
+}
+
 
 main(){
-if read -r -s -n 1 -t 15 -p "This script will trash the folder '$TMP_DIR' if it exists, wiping any contents. Are you sure? Press any key in the next 15 seconds to continue..." key; then
-  # Do Nothing
-  echo ""
-else
-  echo "Aborting."
-  exit -1
-fi
-  echo "= Ensuring $TMP_DIR is clean" 
-  if [ -d $TMP_DIR ]; then
-    sudo rm -rf $TMP_DIR
+  if read -r -s -n 1 -t 15 -p "This script will trash the folder '$TMP_DIR' if it exists, wiping any contents. Are you sure? Press any key in the next 15 seconds to continue..." key; then
+    # Do Nothing
+    echo ""
+  else
+    echo "Aborting."
+    exit -1
   fi
-  mkdir $TMP_DIR
+  cd `dirname "${0}"`
+  echo "= Ensuring $TMP_DIR is clean" 
+  if [ -d "$TMP_DIR" ]; then
+    sudo rm -rf "$TMP_DIR"
+  fi
+  mkdir "$TMP_DIR"
   echo "Acquiring sources"
   source config.sh
   echo "= Unpacking ${ISO}"
-  mkdir -p $TMP_DIR/mount $TMP_DIR/iso $TMP_DIR/sqfs $TMP_DIR/initrd
+  mkdir -p "$TMP_DIR/mount" "$TMP_DIR/iso" "$TMP_DIR/sqfs" "$TMP_DIR/initrd"
   echo "- Mounting ${ISO} (Root permissions needed)"
-  sudo mount iso/${ISO} $TMP_DIR/mount -o loop
-  cp -a $TMP_DIR/mount/* $TMP_DIR/iso/
+  sudo mount iso/${ISO} "$TMP_DIR/mount" -o loop
+  cp -a "$TMP_DIR/mount/*" "$TMP_DIR/iso/"
   sudo umount $TMP_DIR/mount
   echo "- Unsquashing Filesystem (Root permissions needed)"
-  sudo unsquashfs -f -d $TMP_DIR/sqfs $TMP_DIR/iso/image.squashfs
+  sudo unsquashfs -f -d "$TMP_DIR/sqfs" "$TMP_DIR/iso/image.squashfs"
   echo "- Extracting Initrd"
-  (cd $TMP_DIR/initrd && cat $TMP_DIR/iso/isolinux/gentoo.igz | xz -d | cpio -id)
+  (cd "$TMP_DIR/initrd" && cat "$TMP_DIR/iso/isolinux/gentoo.igz" | xz -d | cpio -id)
+  echo "= Modifying Stage 3 tarball"
+  echo "- Extracting base system"
+  tar -xjpf "${STAGE}" -C "$TMP_DIR/fake_install"
+  echo "- Binding Filesystems for chroot"
+  mount -t proc proc "$TMP_DIR/fake_install/proc"
+  mount --rbind /dev "$TMP_DIR/fake_install/dev"
+  mount --rbind /sys "$TMP_DIR/fake_install/sys"
+
   echo "= Modifying installer image"
   echo "- Setting default boot to installer"
-  sed -i 's/ontimeout localhost/ontimeout gentoo/g' $TMP_DIR/iso/isolinux/isolinux.cfg
+  sed -i 's/ontimeout localhost/ontimeout gentoo/g' "$TMP_DIR/iso/isolinux/isolinux.cfg"
+  echo "- Downloading packages to be installed"
+  # NOTE: This assumes the building host has an updated portage tree and is
+  #       pulling from the same repo as the installer
+  sudo emerge -fq --config-root "." ${EMERGE_BASE_PACKAGES} ${EMERGE_EXTRA_PACKAGES}
   echo "- Copying in build tools"
-  sudo cp -ar builder $TMP_DIR/sqfs/opt/
+  sudo cp -ar builder "$TMP_DIR/sqfs/opt/"
   echo "- Adding auto-run for install script"
-  echo "echo 'if [ \$(tty) == \"/dev/tty1\" ]; then /opt/builder/full_install.sh; fi' >> $TMP_DIR/sqfs/root/.bashrc" | sudo bash
+  echo "echo 'if [ \$(tty) == \"/dev/tty1\" ]; then /opt/builder/full_install.sh; fi' >> \"$TMP_DIR/sqfs/root/.bashrc\"" | sudo bash
   echo "= Repackaging ${ISO}"
   echo "- Squashing Filesystem"
-  rm $TMP_DIR/iso/image.squashfs
-  sudo mksquashfs $TMP_DIR/sqfs $TMP_DIR/iso/image.squashfs
+  rm "$TMP_DIR/iso/image.squashfs"
+  sudo mksquashfs "$TMP_DIR/sqfs" "$TMP_DIR/iso/image.squashfs"
   echo "- Zipping Initrd"
-  rm $TMP_DIR/iso/isolinux/gentoo.igz
-  (cd $TMP_DIR/initrd && find . | cpio --quiet --dereference -o -H newc | lzma > $TMP_DIR/iso/isolinux/gentoo.igz)
+  rm "$TMP_DIR/iso/isolinux/gentoo.igz"
+  (cd "$TMP_DIR/initrd" && find . | cpio --quiet --dereference -o -H newc | lzma > "$TMP_DIR/iso/isolinux/gentoo.igz")
   echo "- Packaging into an ISO"
-  mkisofs -R -b isolinux/isolinux.bin -no-emul-boot -boot-load-size 4 -boot-info-table -c isolinux/boot.cat -iso-level 3 -o $OUT_IMAGE $TMP_DIR/iso/
+  mkisofs -R -b isolinux/isolinux.bin -no-emul-boot -boot-load-size 4 -boot-info-table -c isolinux/boot.cat -iso-level 3 -o $OUT_IMAGE "$TMP_DIR/iso/"
   echo "= Cleaning Up"
-  #sudo rm -rf $TMP_DIR
+  #sudo rm -rf "$TMP_DIR"
+  #sudo rm -rf builder/distfiles
 
 }
 # Parse options/parameters

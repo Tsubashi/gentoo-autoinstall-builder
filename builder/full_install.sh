@@ -1,9 +1,29 @@
 #!/bin/bash
 
+chroot_exec() {
+    local args="${@}"
+    chroot "${R}" /bin/bash -c "${args}"
+}
+
+echo_status_category() {
+    local args="${@}"
+    echo -e `tput setaf 1;tput smul`"= $args"`tput sgr0`
+}
+
+echo_status() {
+    local args="${@}"
+    echo -e `tput setaf 1;tput bold`"- $args"`tput sgr0`
+}
+
+echo_error() {
+    local args="${@}"
+    echo -e `tput setaf 1;`"- $args"`tput sgr0`
+}
+
 echo 
 echo "=== GENTOO AUTO-INSTALL ==="
 echo "| Built from git revision |"
-echo "|         $REV         |"
+echo "|         ${REV}         |"
 echo "*-------------------------*" 
 echo
 
@@ -15,100 +35,100 @@ elif [ -b /dev/sda ]; then
 elif [ -b /dev/hda ]; then
   DEV=/dev/hda
 else
-  echo "Unable to find any disk to install on. I checked /dev/{v,s,h}da and got nothing. Make sure the disk is connected and operational and try again."
+  echo_error "Unable to find any disk to install on. I checked /dev/{v,s,h}da and got nothing. Make sure the disk is connected and operational and try again."
   exit
 fi
 
 
-if read -r -s -n 1 -t 5 -p "I am about to commence a full installation on $DEV. This will destroy it's current contents. If this is not what you want, press any key to cancel. You have 15 seconds..." key; then
-  echo "Aborting."
+if read -r -s -n 1 -t 5 -p "`tput setaf 3`I am about to commence a full installation on $DEV. This will destroy it's current contents. If this is not what you want, press any key to cancel. You have 15 seconds...`tput sgr0`" key; then
+  echo_error "Aborting."
   exit
 fi
 cd `dirname "${0}"`
 
 source builder.cfg
 HOSTNAME=$(shuf -n1 adjectives.txt)-$(shuf -n1 first-names.txt)
+R="/mnt/gentoo"    # chroot dir
+K="/usr/src/linux" # kernel dir
 
-chroot_exec() {
-    local args="${@}"
-    chroot "${R}" /bin/bash -c "${args}"
-}
-
-R="/mnt/gentoo"
-K="/usr/src/linux"
-
-echo "Creating partitions and formatting disk"
-echo "Rewriting disk label (GPT)"
+echo_status_category "Creating partitions and formatting disk"
+echo_status "Rewriting disk label (GPT)"
 parted -s "$DEV" mklabel gpt
-echo "Creating GRUB Partition"
+
+echo_status "Creating GRUB Partition"
 parted -s "$DEV" mkpart primary 1M 2M
 parted -s "$DEV" set 1 bios_grub on 
-echo "Creating Boot Partition"
+
+echo_status "Creating Boot Partition"
 parted -s "$DEV" mkpart primary 2M 1G
-echo "Creating Root Partition"
+
+echo_status "Creating Root Partition"
 parted -s "$DEV" mkpart primary 1G 100%
 partprobe > /dev/null 2>&1
 
-echo "Installing filesystems"
+echo_status "Installing filesystems"
 mkfs.ext4 -FF "$DEV""3"
 mkfs.ext2 -FF "$DEV""2"
 
-echo "Mounting root filesystem"
-mount "$DEV""3" /mnt/gentoo
+echo_status_category "Preparing for chroot"
+echo_status "Mounting root filesystem"
+mount "$DEV""3" ${R}
 
-echo "Extracting base system"
-tar -xjpf "${STAGE}" -C /mnt/gentoo
+echo_status "Extracting base system"
+tar -xpf "base_system.tlz" -C ${R}
 
-echo "Mounting boot filesystem"
-mount "$DEV""2" /mnt/gentoo/boot
+echo_status "Mounting boot filesystem"
+mount "$DEV""2" ${R}/boot
 
-echo "Binding Filesystems for chroot"
-mount -t proc proc /mnt/gentoo/proc
-mount --rbind /dev /mnt/gentoo/dev
-mount --rbind /sys /mnt/gentoo/sys
+echo_status "Binding Filesystems for chroot"
+mount -t proc proc ${R}/proc
+mount --rbind /dev ${R}/dev
+mount --rbind /sys ${R}/sys
 
-echo "Extracting portage"
-tar -xjpf "${PORTAGE}" -C /mnt/gentoo/usr/
-cp -f package.use ${R}/etc/portage/package.use/all
-cp -f package.accept_keywords ${R}/etc/portage/package.accept_keywords
-echo "MAKEOPTS=\"-j$(nproc)\"" >> ${R}/etc/portage/make.conf
-sed -i 's/bindist/-bindist/g' ${R}/etc/portage/make.conf
+echo_status "Copying in resolv"
 cp -f /etc/resolv.conf ${R}/etc
 
-echo "Syncing portage (Just in Case)"
+echo_status "Telling make.conf how many cores we have"
+echo "MAKEOPTS=\"-j$(nproc)\"" >> ${R}/etc/portage/make.conf
+
+echo_status_category "Running install in chroot"
+echo_status "Syncing portage (Just in Case)"
 chroot_exec "emerge --sync"
 
-echo "Installing packages"
+echo_status "Installing packages"
 chroot_exec "emerge --jobs=8 --keep-going ${EMERGE_BASE_PACKAGES} ${EMERGE_EXTRA_PACKAGES}"
 
-echo "Copying in kernel configs"
+echo_status_category "Building Kernel"
+echo_status "Copying in kernel configs"
 cp -f kernel-config ${R}/usr/src/linux/.config
 
-echo "Building and installing kernel"
+echo_status "Building and installing kernel"
 chroot_exec "cd ${K}; make olddefconfig; make localyesconfig; make -j$(nproc) ${KERNEL_MAKE_OPTS}; make modules_install; make install; make clean;"
 
-echo "Installing bootloader (GRUB)"
+echo_status_category "Setting up Bootloader"
+echo_status "Installing GRUB"
 chroot_exec "grub-install $DEV"
 
-echo "Configuring bootloader"
+echo_status "Configuring bootloader"
 cp -f grub ${R}/etc/default/grub
 chmod 644 ${R}/etc/default/grub
 chroot_exec "grub-mkconfig -o /boot/grub/grub.cfg"
 
-echo "Configuring services"
+echo_status_category "Configuring services"
+echo_status "Installing network init scripts"
 # create init script for net.eth0
 chroot_exec "cd /etc/init.d/; ln -sf net.lo net.eth0"
 
-# set up salt configuration
+echo_status "Configuring salt"
 cp -f salt-config ${R}/etc/salt/minion
 echo "id: \"$HOSTNAME\"" >> ${R}/etc/salt/minion
 
-# enable default services
+echo_status "Enabling default services"
 for service in acpid syslog-ng cronie net.eth0 sshd ntpd qemu-guest-agent salt-minion; do
     chroot_exec "rc-update add ${service} default"
 done
 
-echo "Touching up system configurations"
+echo_status "Touching up system configurations"
 # ensure eth0 style nic naming
 chroot_exec "ln -sf /dev/null /etc/udev/rules.d/70-persistent-net.rules"
 chroot_exec "ln -sf /dev/null /etc/udev/rules.d/80-net-setup-link.rules"
@@ -142,16 +162,16 @@ ${FS_UUID}      /       ext4        defaults,noatime,user_xattr 0 1
 ${BOOT_UUID}    /boot   ext2        defaults,noatime,noauto     1 2
 EOF
 
-echo "Setting Root Password to 'eye<3Gentoo'"
+echo_status "Setting Root Password to 'eye<3Gentoo'"
 chroot_exec "echo 'root:eye<3Gentoo' | chpasswd"
 
-echo "Copying in the last of the files"
+echo_status "Copying in the last of the files"
 # copy in growpart from cloud-utils package
 cp -f growpart ${R}/usr/bin/
 chmod 755 ${R}/usr/bin/growpart
 
 # TODO: better cleanup
-echo "Executing final cleanup"
+echo_status_category "Executing final cleanup"
 chroot_exec "eselect news read &>/dev/null"
 chroot_exec "eix-update"
 chroot_exec "emaint all -f"
@@ -161,3 +181,4 @@ rm -rf ${R}/etc/resolv.conf
 echo ""
 echo ""
 echo "=== All finished! Make sure to check for any egregious errors. Barring those, go ahead and shutdown and remove the CD to get started! ==="
+tput bel

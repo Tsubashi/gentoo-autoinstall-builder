@@ -1,9 +1,8 @@
 /config.cfg
 /builder/builder.cfg
 /builder/builder.cfg.custom
-/builder/portage-*
-/builder/stage3-*
+/dl/*
 
 /*.img
 /*.iso
-/iso/*
+.*.swp
