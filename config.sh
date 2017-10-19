@@ -16,7 +16,7 @@ if [ -z "${ISO}" -o ! -f "dl/${ISO}" ];then
     else
         :
         echo "downloading current iso ${ISO}"
-        rm dl/*.iso
+        rm dl/*.iso 2> /dev/null
         curl -o "dl/${ISO}" "${BASE_URL}${CURRENT}";
     fi
 fi
@@ -33,7 +33,7 @@ if [ -z "${STAGE}" -o ! -f "dl/${STAGE}" ];then
     else
         :
         echo "downloading current stage ${STAGE}"
-        rm dl/*stage3*.bz2
+        rm dl/*stage3*.bz2 2> /dev/null
         curl -o "dl/${STAGE}" "${BASE_URL}${CURRENT}";
     fi
 fi
@@ -48,7 +48,7 @@ if [ -z "${PORTAGE}" ];then
     else
         :
         echo "downloading current portage ${PORTAGE}"
-        rm dl/*portage*.bz2
+        rm dl/*portage*.bz2 2> /dev/null
         curl -o "dl/${PORTAGE}" "http://distfiles.gentoo.org/releases/snapshots/current/${PORTAGE}";
     fi
 fi
