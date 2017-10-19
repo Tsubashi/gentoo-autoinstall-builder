@@ -59,6 +59,7 @@ HOSTNAME=$(shuf -n1 adjectives.txt)-$(shuf -n1 first-names.txt)
 R="/mnt/gentoo"    # chroot dir
 K="/usr/src/linux" # kernel dir
 
+echo ""
 echo_status_category "Creating partitions and formatting disk"
 echo_status "Rewriting disk label (GPT)"
 parted -s "$DEV" mklabel gpt
