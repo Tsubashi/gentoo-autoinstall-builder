@@ -6,18 +6,26 @@ chroot_exec() {
 }
 
 echo_status_category() {
-    local args="${@}"
-    echo -e `tput setaf 1;tput smul`"= $args"`tput sgr0`
+  local args="${@}"
+  tput setaf 6
+  tput smul
+  echo -e "= $args"
+  tput sgr0
 }
 
 echo_status() {
-    local args="${@}"
-    echo -e `tput setaf 1;tput bold`"- $args"`tput sgr0`
+  local args="${@}"
+  tput setaf 4
+  tput bold
+  echo -e "- $args"
+  tput sgr0
 }
 
 echo_error() {
-    local args="${@}"
-    echo -e `tput setaf 1;`"- $args"`tput sgr0`
+  local args="${@}"
+  tput setaf 4
+  echo -e "!!! - $args - !!!"
+  tput sgr0
 }
 
 echo 

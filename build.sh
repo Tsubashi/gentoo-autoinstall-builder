@@ -11,7 +11,8 @@ TOTAL_POSITIONAL_PARAMETERS=$#
 FULL_POSITIONAL_PARAMETER_STRING=$@
 TOTAL_PARAMETERS=0
 TOTAL_OPTIONS=0
-TMP_DIR=/tmp/gentoo-install
+TMP_DIR="/tmp/gentoo-install"
+R="$TMP_DIR/chroot"
 OUT_IMAGE="Gentoo-Installer-$(date "+%Y-%m-%d").iso"
 
 ## Configuration
@@ -65,12 +66,28 @@ parameter_validation(){
 
 chroot_exec() {
   local args="${@}"
-  chroot "${R}" /bin/bash -c "${args}"
+  sudo chroot "${R}" /bin/bash -c "${args}"
+}
+
+echo_status_category() {
+  local args="${@}"
+  tput setaf 6
+  tput smul
+  echo -e "= $args"
+  tput sgr0
+}
+
+echo_status() {
+  local args="${@}"
+  tput setaf 4
+  tput bold
+  echo -e "- $args"
+  tput sgr0
 }
 
 
 main(){
-  if read -r -s -n 1 -t 15 -p "This script will trash the folder '$TMP_DIR' if it exists, wiping any contents. Are you sure? Press any key in the next 15 seconds to continue..." key; then
+  if read -r -s -n 1 -t 15 -p "`tput setaf 3` This script will trash the folder '$TMP_DIR' if it exists, wiping any contents. Are you sure? Press any key in the next 15 seconds to continue...`tput sgr0`" key; then
     # Do Nothing
     echo ""
   else
@@ -78,54 +95,88 @@ main(){
     exit -1
   fi
   cd `dirname "${0}"`
-  echo "= Ensuring $TMP_DIR is clean" 
-  if [ -d "$TMP_DIR" ]; then
-    sudo rm -rf "$TMP_DIR"
+  
+  echo_status_category "Ensuring $TMP_DIR is clean" 
+  if [ -d $TMP_DIR ]; then
+    sudo rm -rf $TMP_DIR
   fi
-  mkdir "$TMP_DIR"
+  mkdir $TMP_DIR
   echo "Acquiring sources"
   source config.sh
-  echo "= Unpacking ${ISO}"
-  mkdir -p "$TMP_DIR/mount" "$TMP_DIR/iso" "$TMP_DIR/sqfs" "$TMP_DIR/initrd"
-  echo "- Mounting ${ISO} (Root permissions needed)"
-  sudo mount iso/${ISO} "$TMP_DIR/mount" -o loop
-  cp -a "$TMP_DIR/mount/*" "$TMP_DIR/iso/"
+  
+  echo_status_category "Unpacking ${ISO}"
+  mkdir -p $TMP_DIR/mount $TMP_DIR/iso $TMP_DIR/sqfs $TMP_DIR/initrd
+  
+  echo_status "Mounting ${ISO} (Root permissions needed)"
+  sudo mount dl/${ISO} $TMP_DIR/mount -o loop
+  cp -a $TMP_DIR/mount/* $TMP_DIR/iso/
   sudo umount $TMP_DIR/mount
-  echo "- Unsquashing Filesystem (Root permissions needed)"
-  sudo unsquashfs -f -d "$TMP_DIR/sqfs" "$TMP_DIR/iso/image.squashfs"
-  echo "- Extracting Initrd"
-  (cd "$TMP_DIR/initrd" && cat "$TMP_DIR/iso/isolinux/gentoo.igz" | xz -d | cpio -id)
-  echo "= Modifying Stage 3 tarball"
-  echo "- Extracting base system"
-  tar -xjpf "${STAGE}" -C "$TMP_DIR/fake_install"
-  echo "- Binding Filesystems for chroot"
-  mount -t proc proc "$TMP_DIR/fake_install/proc"
-  mount --rbind /dev "$TMP_DIR/fake_install/dev"
-  mount --rbind /sys "$TMP_DIR/fake_install/sys"
-
-  echo "= Modifying installer image"
-  echo "- Setting default boot to installer"
-  sed -i 's/ontimeout localhost/ontimeout gentoo/g' "$TMP_DIR/iso/isolinux/isolinux.cfg"
-  echo "- Downloading packages to be installed"
-  # NOTE: This assumes the building host has an updated portage tree and is
-  #       pulling from the same repo as the installer
-  sudo emerge -fq --config-root "." ${EMERGE_BASE_PACKAGES} ${EMERGE_EXTRA_PACKAGES}
-  echo "- Copying in build tools"
-  sudo cp -ar builder "$TMP_DIR/sqfs/opt/"
-  echo "- Adding auto-run for install script"
-  echo "echo 'if [ \$(tty) == \"/dev/tty1\" ]; then /opt/builder/full_install.sh; fi' >> \"$TMP_DIR/sqfs/root/.bashrc\"" | sudo bash
-  echo "= Repackaging ${ISO}"
-  echo "- Squashing Filesystem"
-  rm "$TMP_DIR/iso/image.squashfs"
-  sudo mksquashfs "$TMP_DIR/sqfs" "$TMP_DIR/iso/image.squashfs"
-  echo "- Zipping Initrd"
-  rm "$TMP_DIR/iso/isolinux/gentoo.igz"
-  (cd "$TMP_DIR/initrd" && find . | cpio --quiet --dereference -o -H newc | lzma > "$TMP_DIR/iso/isolinux/gentoo.igz")
-  echo "- Packaging into an ISO"
-  mkisofs -R -b isolinux/isolinux.bin -no-emul-boot -boot-load-size 4 -boot-info-table -c isolinux/boot.cat -iso-level 3 -o $OUT_IMAGE "$TMP_DIR/iso/"
-  echo "= Cleaning Up"
-  #sudo rm -rf "$TMP_DIR"
-  #sudo rm -rf builder/distfiles
+  
+  echo_status "Unsquashing Filesystem (Root permissions needed)"
+  sudo unsquashfs -f -d $TMP_DIR/sqfs $TMP_DIR/iso/image.squashfs
+  
+  echo_status "Extracting Initrd"
+  (cd $TMP_DIR/initrd && pv $TMP_DIR/iso/isolinux/gentoo.igz | xz -d | sudo cpio -id)
+  
+  echo_status_category "Modifying Stage 3 tarball"
+  
+  echo_status "Extracting base system"
+  mkdir ${R}
+  pv "dl/${STAGE}" | sudo tar -xjpf - -C ${R}
+  
+  echo_status "Binding Filesystems for chroot"
+  sudo mount -t proc proc "${R}/proc"
+  sudo mount --rbind /dev "${R}/dev"
+  sudo mount --make-rslave "${R}/dev"
+  sudo mount --rbind /sys "${R}/sys"
+  sudo mount --make-rslave "${R}/sys"
+  
+  echo_status "Extracting portage"
+  pv "dl/${PORTAGE}" | sudo tar -xjpf -  -C ${R}/usr/
+  sudo cp -f files/package.use ${R}/etc/portage/package.use/all
+  sudo cp -f files/package.accept_keywords ${R}/etc/portage/package.accept_keywords
+  sudo cp -rf files/repos.conf ${R}/etc/portage/
+  sudo sed -i 's/bindist/-bindist/g' ${R}/etc/portage/make.conf
+  sudo cp -f /etc/resolv.conf ${R}/etc
+  
+  echo_status "Syncing portage"
+  chroot_exec "emerge --sync"
+  
+  echo_status "Downloading packages to be installed"
+  chroot_exec emerge -fq ${EMERGE_BASE_PACKAGES} ${EMERGE_EXTRA_PACKAGES}
+  
+  echo_status "Repacking tarball"
+  sudo umount -R "${R}/proc"
+  sudo umount -R "${R}/dev"
+  sudo umount -R "${R}/sys"
+  sudo tar -capf - ${R} -P | pv -s $(sudo du -sb ${R} | awk '{print $1}') | lzma > builder/base_system.tlz
+  
+  echo_status_category "Modifying installer image"
+  
+  echo_status "Setting default boot to installer"
+  sed -i 's/ontimeout localhost/ontimeout gentoo/g' $TMP_DIR/iso/isolinux/isolinux.cfg
+  
+  echo_status "Copying in build tools"
+  sudo cp -ar builder $TMP_DIR/sqfs/opt/
+  
+  echo_status "Adding auto-run for install script"
+  echo "echo 'if [ \$(tty) == \"/dev/tty1\" ]; then /opt/builder/full_install.sh; fi' >> $TMP_DIR/sqfs/root/.bashrc" | sudo bash
+  
+  echo_status_category "Repackaging ${ISO}"
+  
+  echo_status "Squashing Filesystem"
+  rm $TMP_DIR/iso/image.squashfs
+  sudo mksquashfs $TMP_DIR/sqfs $TMP_DIR/iso/image.squashfs
+  
+  echo_status "Zipping Initrd"
+  rm $TMP_DIR/iso/isolinux/gentoo.igz
+  (cd $TMP_DIR/initrd && find . | sudo cpio --quiet --dereference -o -H newc | lzma > $TMP_DIR/iso/isolinux/gentoo.igz)
+  
+  echo_status "Packaging into an ISO"
+  mkisofs -R -b isolinux/isolinux.bin -no-emul-boot -boot-load-size 4 -boot-info-table -c isolinux/boot.cat -iso-level 3 -o $OUT_IMAGE $TMP_DIR/iso/
+  
+  echo_status_category "Cleaning Up"
+  #sudo rm -rf $TMP_DIR
 
 }
 # Parse options/parameters
