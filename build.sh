@@ -140,6 +140,9 @@ main(){
   sudo cp -rf files/repos.conf ${R}/etc/portage/
   sudo sed -i 's/bindist/-bindist/g' ${R}/etc/portage/make.conf
   sudo cp -f /etc/resolv.conf ${R}/etc
+
+  echo_status "Grabbing Git"
+  chroot_exec "emerge -q dev-vcs/git"
   
   echo_status "Syncing portage"
   chroot_exec "emerge --sync"
