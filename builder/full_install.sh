@@ -112,7 +112,12 @@ echo_status "Copying in kernel configs"
 cp -f kernel-config ${R}/usr/src/linux/.config
 
 echo_status "Building and installing kernel"
-chroot_exec "cd ${K}; make olddefconfig; make localyesconfig; make -j$(nproc) ${KERNEL_MAKE_OPTS}; make modules_install; make install; make clean;"
+chroot_exec "cd ${K}; yes "" | make localyesconfig;"
+chroot_exec "cd ${K}; make -j$(nproc) ${KERNEL_MAKE_OPTS};"
+chroot_exec "cd ${K}; make modules_install;"
+chroot_exec "cd ${K}; make install;"
+chroot_exec "cd ${K}; make clean;"
+
 
 echo_status_category "Setting up Bootloader"
 echo_status "Installing GRUB"
