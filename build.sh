@@ -98,10 +98,12 @@ main(){
   
   echo_status_category "Ensuring $TMP_DIR is clean" 
   if [ -d $TMP_DIR ]; then
+    echo_status "Removing $TMP_DIR"
     sudo rm -rf $TMP_DIR
   fi
+  echo_status "Creating $TMP_DIR"
   mkdir $TMP_DIR
-  echo "Acquiring sources"
+  echo_status "Acquiring sources"
   source config.sh
   
   echo_status_category "Unpacking ${ISO}"

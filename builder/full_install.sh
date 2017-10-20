@@ -108,12 +108,15 @@ echo_status "Installing packages"
 chroot_exec "emerge --jobs=8 --keep-going ${EMERGE_BASE_PACKAGES} ${EMERGE_EXTRA_PACKAGES}"
 
 echo_status_category "Building Kernel"
-echo_status "Copying in kernel configs"
-cp -f kernel-config ${R}/usr/src/linux/.config
 
-echo_status "Building and installing kernel"
+echo_status "Running config scripts"
+chroot_exec "cd ${K}; yes "" | make mrproper;"
 chroot_exec "cd ${K}; yes "" | make localyesconfig;"
+
+echo_status "Building Kernel"
 chroot_exec "cd ${K}; make -j$(nproc) ${KERNEL_MAKE_OPTS};"
+
+echo_status "Installing Kernel"
 chroot_exec "cd ${K}; make modules_install;"
 chroot_exec "cd ${K}; make install;"
 chroot_exec "cd ${K}; make clean;"
