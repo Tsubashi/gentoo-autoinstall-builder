@@ -149,7 +149,7 @@ main(){
   sudo umount -R "${R}/proc"
   sudo umount -R "${R}/dev"
   sudo umount -R "${R}/sys"
-  sudo tar -capf - ${R} -P | pv -s $(sudo du -sb ${R} | awk '{print $1}') | lzma > builder/base_system.tlz
+  sudo tar -capf - -C ${R} . -P | pv -s $(sudo du -sb ${R} | awk '{print $1}') | lzma > builder/base_system.tlz
   
   echo_status_category "Modifying installer image"
   
