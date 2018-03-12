@@ -124,7 +124,7 @@ main(){
   
   echo_status "Extracting base system"
   mkdir ${R}
-  pv "dl/${STAGE}" | sudo tar -xjpf - -C ${R}
+  xz -d -c "dl/${STAGE}" | pv | sudo tar -xpf - -C ${R}
   
   echo_status "Binding Filesystems for chroot"
   sudo mount -t proc proc "${R}/proc"

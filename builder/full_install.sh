@@ -28,6 +28,8 @@ echo_error() {
   tput sgr0
 }
 
+source builder.cfg
+
 echo 
 echo "=== GENTOO AUTO-INSTALL ==="
 echo "| Built from git revision |"
@@ -54,7 +56,6 @@ if read -r -s -n 1 -t 5 -p "`tput setaf 3`I am about to commence a full installa
 fi
 cd `dirname "${0}"`
 
-source builder.cfg
 HOSTNAME=$(shuf -n1 adjectives.txt)-$(shuf -n1 first-names.txt)
 R="/mnt/gentoo"    # chroot dir
 K="/usr/src/linux" # kernel dir
@@ -138,7 +139,6 @@ chroot_exec "cd /etc/init.d/; ln -sf net.lo net.eth0"
 
 echo_status "Configuring salt"
 cp -f salt-config ${R}/etc/salt/minion
-echo "id: \"$HOSTNAME\"" >> ${R}/etc/salt/minion
 
 echo_status "Enabling default services"
 for service in acpid syslog-ng cronie net.eth0 sshd ntpd qemu-guest-agent salt-minion; do
@@ -168,7 +168,7 @@ chroot_exec "sed -i 's/slaac/#slaac/g' /etc/dhcpcd.conf"
 # by default read /etc/hostname 
 cp -f hostname ${R}/etc/conf.d/
 chmod 644 ${R}/etc/conf.d/hostname
-echo "$HOSTNAME" > ${R}/etc/hostname
+echo "${HOSTNAME}" > ${R}/etc/hostname
 
 echo "Generating Filesystem Tables"
 # generate fstab
@@ -194,6 +194,15 @@ chroot_exec "eix-update"
 chroot_exec "emaint all -f"
 rm -rf ${R}/usr/portage/distfiles/*
 rm -rf ${R}/etc/resolv.conf
+
+# Ask User for hostname
+if read -r -s -n 1 -t 5 -p "`tput setaf 3`Press any key to set a custom hostname. I'll wait 15 seconds, then generate one myselfif you don't answer.`tput sgr0`" key; then
+  read -s -p "New Hostname: " HOSTNAME
+  echo "${HOSTNAME}" > ${R}/etc/hostname
+fi
+
+
+
 
 echo ""
 echo ""
